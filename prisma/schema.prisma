@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ScanType {
+  QR
+  BARCODE
+}
+
+enum ScanStatus {
+  RECEIVED
+  VALID
+  INVALID
+}
+
+model Device {
+  deviceId   String   @id
+  platform   String
+  appVersion String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+  scans      Scan[]
+
+  @@index([platform])
+}
+
+model Scan {
+  id        String     @id @default(uuid()) @db.Uuid
+  deviceId  String
+  code      String     @db.VarChar(4096)
+  type      ScanType
+  status    ScanStatus @default(RECEIVED)
+  createdAt DateTime   @default(now())
+  device    Device     @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([status])
+}

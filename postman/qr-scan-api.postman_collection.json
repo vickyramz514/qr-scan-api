@@ -1,0 +1,603 @@
+{
+  "info": {
+    "name": "QR Scan API",
+    "description": "Import this collection, start the API with npm run dev, then run the requests from top to bottom. Submit QR scan saves the new scan id into {{scanId}} for Get scan.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "deviceId",
+      "value": "8f3a7c2e-91b4-4e2a-9f31"
+    },
+    {
+      "key": "scanId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/health"
+      },
+      "response": [
+        {
+          "name": "200 Server is healthy",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/health"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Server is healthy\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Register device",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"platform\": \"android\",\n  \"appVersion\": \"1.0.0\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/devices"
+      },
+      "response": [
+        {
+          "name": "200 Device registered",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"platform\": \"android\",\n  \"appVersion\": \"1.0.0\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/devices"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"platform\": \"android\",\n    \"appVersion\": \"1.0.0\",\n    \"createdAt\": \"2026-10-08T10:00:00.000Z\",\n    \"lastSeenAt\": \"2026-10-08T10:00:00.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Register device again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"platform\": \"ios\",\n  \"appVersion\": \"1.1.0\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/devices",
+        "description": "Same deviceId updates platform, appVersion, and lastSeenAt. It does not create a second device."
+      },
+      "response": [
+        {
+          "name": "200 Device updated",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"platform\": \"ios\",\n  \"appVersion\": \"1.1.0\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/devices"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"platform\": \"ios\",\n    \"appVersion\": \"1.1.0\",\n    \"createdAt\": \"2026-10-08T10:00:00.000Z\",\n    \"lastSeenAt\": \"2026-10-08T10:05:00.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Submit QR scan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "if (body.data && body.data.id) {",
+              "  pm.collectionVariables.set('scanId', body.data.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/scans"
+      },
+      "response": [
+        {
+          "name": "201 QR scan stored",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\",\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"code\": \"ABC123456\",\n    \"type\": \"QR\",\n    \"status\": \"RECEIVED\",\n    \"createdAt\": \"2026-10-08T10:01:01.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Submit barcode scan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"123456789\",\n  \"type\": \"BARCODE\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/scans"
+      },
+      "response": [
+        {
+          "name": "201 Barcode scan stored",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"123456789\",\n  \"type\": \"BARCODE\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"a1b2c3d4-e5f6-4789-a012-3456789abcde\",\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"code\": \"123456789\",\n    \"type\": \"BARCODE\",\n    \"status\": \"RECEIVED\",\n    \"createdAt\": \"2026-10-08T10:01:05.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Submit the same code again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/scans",
+        "description": "A repeated read of the same code is stored as a new scan."
+      },
+      "response": [
+        {
+          "name": "201 Second scan stored",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "Created",
+          "code": 201,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"b2c3d4e5-f6a7-4890-b123-456789abcdef\",\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"code\": \"ABC123456\",\n    \"type\": \"QR\",\n    \"status\": \"RECEIVED\",\n    \"createdAt\": \"2026-10-08T10:01:10.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Scan history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/scans?page=1&limit=20"
+      },
+      "response": [
+        {
+          "name": "200 Newest scans first",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/scans?page=1&limit=20"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"b2c3d4e5-f6a7-4890-b123-456789abcdef\",\n      \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n      \"code\": \"ABC123456\",\n      \"type\": \"QR\",\n      \"status\": \"RECEIVED\",\n      \"createdAt\": \"2026-10-08T10:01:10.000Z\"\n    },\n    {\n      \"id\": \"a1b2c3d4-e5f6-4789-a012-3456789abcde\",\n      \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n      \"code\": \"123456789\",\n      \"type\": \"BARCODE\",\n      \"status\": \"RECEIVED\",\n      \"createdAt\": \"2026-10-08T10:01:05.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 2,\n    \"totalPages\": 1\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Device scan history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/devices/{{deviceId}}/scans?page=1&limit=20"
+      },
+      "response": [
+        {
+          "name": "200 Scans for this device",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/devices/{{deviceId}}/scans?page=1&limit=20"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"b2c3d4e5-f6a7-4890-b123-456789abcdef\",\n      \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n      \"code\": \"ABC123456\",\n      \"type\": \"QR\",\n      \"status\": \"RECEIVED\",\n      \"createdAt\": \"2026-10-08T10:01:10.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"totalPages\": 1\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get scan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/scans/{{scanId}}",
+        "description": "Run Submit QR scan first. That request stores the returned id in {{scanId}}."
+      },
+      "response": [
+        {
+          "name": "200 Scan",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/scans/{{scanId}}"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\",\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"code\": \"ABC123456\",\n    \"type\": \"QR\",\n    \"status\": \"RECEIVED\",\n    \"createdAt\": \"2026-10-08T10:01:01.000Z\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Scan from unknown device",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"00000000-0000-4000-8000-000000000000\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/scans"
+      },
+      "response": [
+        {
+          "name": "404 Device is not registered",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"00000000-0000-4000-8000-000000000000\",\n  \"code\": \"ABC123456\",\n  \"type\": \"QR\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"DEVICE_NOT_FOUND\",\n    \"message\": \"Device is not registered\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Invalid scan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"   \",\n  \"type\": \"text\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/scans"
+      },
+      "response": [
+        {
+          "name": "400 Invalid request",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\",\n  \"code\": \"   \",\n  \"type\": \"text\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Invalid request\",\n    \"details\": [\n      {\n        \"path\": \"code\",\n        \"message\": \"Code cannot be empty\"\n      },\n      {\n        \"path\": \"type\",\n        \"message\": \"Type must be QR or BARCODE\"\n      }\n    ]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Unknown scan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/scans/550e8400-e29b-41d4-a716-446655440000"
+      },
+      "response": [
+        {
+          "name": "404 Scan not found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/scans/550e8400-e29b-41d4-a716-446655440000"
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"SCAN_NOT_FOUND\",\n    \"message\": \"Scan not found\"\n  }\n}"
+        }
+      ]
+    }
+  ]
+}
