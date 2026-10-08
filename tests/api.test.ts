@@ -387,6 +387,21 @@ describe('QR scan API', () => {
     expect(response.body.data[0].code).toBe('ONE');
   });
 
+  it('serves Swagger UI and the OpenAPI document', async () => {
+    const spec = await request(app).get('/api/docs/openapi.json');
+
+    expect(spec.status).toBe(200);
+    expect(spec.body.openapi).toBe('3.0.3');
+    expect(spec.body.paths['/api/v1/scans']).toBeDefined();
+    expect(spec.body.paths['/api/v1/devices']).toBeDefined();
+
+    const ui = await request(app).get('/api/docs/');
+
+    expect(ui.status).toBe(200);
+    expect(ui.headers['content-type']).toMatch(/html/);
+    expect(ui.text).toContain('QR Scan API');
+  });
+
   it('returns a healthy response', async () => {
     const response = await request(app).get('/api/v1/health');
 

@@ -3,6 +3,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { env, getCorsOrigin } from './config/env';
+import { mountSwagger } from './docs/swagger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { notFoundMiddleware } from './middleware/notFound.middleware';
 import { deviceRouter } from './routes/device.routes';
@@ -15,7 +16,20 @@ export const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-app.use(helmet());
+const apiHelmet = helmet();
+const docsHelmet = helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+});
+
+app.use((req, res, next) => {
+  if (req.path === '/api/docs' || req.path.startsWith('/api/docs/')) {
+    docsHelmet(req, res, next);
+    return;
+  }
+
+  apiHelmet(req, res, next);
+});
 app.use(
   cors({
     origin: getCorsOrigin(),
@@ -31,7 +45,7 @@ app.use(
     limit: env.RATE_LIMIT_MAX_REQUESTS,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/api/v1/health',
+    skip: (req) => req.path === '/api/v1/health' || req.path.startsWith('/api/docs'),
     handler: (_req, res) => {
       res.status(429).json({
         success: false,
@@ -74,5 +88,6 @@ app.use((req, res, next) => {
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/devices', deviceRouter);
 app.use('/api/v1/scans', scanRouter);
+mountSwagger(app);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

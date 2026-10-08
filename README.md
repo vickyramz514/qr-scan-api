@@ -34,6 +34,9 @@ src/
   validators/
     device.validator.ts
     scan.validator.ts
+  docs/
+    openapi.ts
+    swagger.ts
   middleware/
     error.middleware.ts
     notFound.middleware.ts
@@ -58,6 +61,10 @@ Route → Controller → Zod validator → Service → Repository → Prisma →
 ```
 
 ## API
+
+Swagger UI for client testing: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+
+On Railway, open `https://YOUR_SERVICE_DOMAIN/api/docs`. The raw spec is at `/api/docs/openapi.json`.
 
 Base path: `/api/v1`
 
