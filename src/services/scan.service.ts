@@ -1,4 +1,4 @@
-import { Scan, ScanStatus, ScanType } from '@prisma/client';
+import { Prisma, Scan, ScanStatus, ScanType } from '@prisma/client';
 import { Pagination } from '../utils/apiResponse';
 import { AppError } from '../utils/errors';
 import * as deviceRepository from '../repositories/device.repository';
@@ -40,6 +40,12 @@ function toPage(items: Scan[], total: number, query: ListScansQuery): {
   };
 }
 
+function duplicateScanError(): AppError {
+  return new AppError(400, 'VALIDATION_ERROR', 'This code already exists', [
+    { path: 'code', message: 'This code already exists' },
+  ]);
+}
+
 export async function createScan(input: CreateScanInput): Promise<ScanResponse> {
   const device = await deviceRepository.findDeviceById(input.deviceId);
 
@@ -47,13 +53,31 @@ export async function createScan(input: CreateScanInput): Promise<ScanResponse> 
     throw new AppError(404, 'DEVICE_NOT_FOUND', 'Device is not registered');
   }
 
-  const scan = await scanRepository.createScan({
-    deviceId: input.deviceId,
-    code: input.code,
-    type: input.type,
-  });
+  const existing = await scanRepository.findScanByCode(input.code);
+  if (existing) {
+    throw duplicateScanError();
+  }
 
-  return toScanResponse(scan);
+  try {
+    const scan = await scanRepository.createScan({
+      deviceId: input.deviceId,
+      code: input.code,
+      type: input.type,
+    });
+
+    return toScanResponse(scan);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw duplicateScanError();
+    }
+
+    throw error;
+  }
+}
+
+export async function clearScans(): Promise<{ deleted: number }> {
+  const deleted = await scanRepository.deleteAllScans();
+  return { deleted };
 }
 
 export async function listScans(query: ListScansQuery): Promise<{

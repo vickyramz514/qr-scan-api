@@ -20,6 +20,11 @@ export async function listScans(req: Request, res: Response): Promise<void> {
   sendPaginated(res, result.data, result.pagination);
 }
 
+export async function clearScans(_req: Request, res: Response): Promise<void> {
+  const result = await scanService.clearScans();
+  sendSuccess(res, result);
+}
+
 export async function getScan(req: Request, res: Response): Promise<void> {
   const parsedId = scanIdSchema.safeParse(readParam(req.params.id));
 

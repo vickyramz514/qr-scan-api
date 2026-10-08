@@ -311,11 +311,11 @@
           }
         },
         "url": "{{baseUrl}}/api/v1/scans",
-        "description": "A repeated read of the same code is stored as a new scan."
+        "description": "A code that is already in the scan table is rejected."
       },
       "response": [
         {
-          "name": "201 Second scan stored",
+          "name": "400 Code already exists",
           "originalRequest": {
             "method": "POST",
             "header": [
@@ -330,15 +330,53 @@
             },
             "url": "{{baseUrl}}/api/v1/scans"
           },
-          "status": "Created",
-          "code": 201,
+          "status": "Bad Request",
+          "code": 400,
           "header": [
             {
               "key": "Content-Type",
               "value": "application/json"
             }
           ],
-          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"b2c3d4e5-f6a7-4890-b123-456789abcdef\",\n    \"deviceId\": \"8f3a7c2e-91b4-4e2a-9f31\",\n    \"code\": \"ABC123456\",\n    \"type\": \"QR\",\n    \"status\": \"RECEIVED\",\n    \"createdAt\": \"2026-10-08T10:01:10.000Z\"\n  }\n}"
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"This code already exists\",\n    \"details\": [\n      {\n        \"path\": \"code\",\n        \"message\": \"This code already exists\"\n      }\n    ]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Clear scans",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/scans",
+        "description": "Deletes every row in the scan table. Devices stay registered."
+      },
+      "response": [
+        {
+          "name": "200 Scans cleared",
+          "originalRequest": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/scans"
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deleted\": 2\n  }\n}"
         }
       ]
     },

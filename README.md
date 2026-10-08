@@ -4,7 +4,7 @@ Backend for a React Native app that scans QR codes and barcodes.
 
 The phone creates its own `deviceId`, registers it, then sends each scanned value. This API stores devices and scans. It does not create device ids, and it does not include login or tokens.
 
-The same code may be scanned more than once. Each scan event is stored as its own row.
+A scanned code can be stored once. Submitting that code again returns a validation error until the scan table is cleared.
 
 ## Requirements
 
@@ -124,7 +124,7 @@ The device must already be registered. `lastSeenAt` is updated, then the scan is
 | Field | Rules |
 | --- | --- |
 | `deviceId` | Required. Must match a registered device. |
-| `code` | Required string. Trimmed. Empty values are rejected. Maximum length is 4096 characters. |
+| `code` | Required string. Trimmed. Empty values are rejected. Maximum length is 4096 characters. Must not already exist in the scan table. |
 | `type` | `QR` or `BARCODE`. |
 
 `201 Created`
@@ -143,7 +143,25 @@ The device must already be registered. `lastSeenAt` is updated, then the scan is
 }
 ```
 
-Repeated scans of the same code are separate records. There is no duplicate rejection.
+If that code is already stored, from this device or any other:
+
+`400 Bad Request`
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "This code already exists",
+    "details": [
+      {
+        "path": "code",
+        "message": "This code already exists"
+      }
+    ]
+  }
+}
+```
 
 If the device is not registered:
 
@@ -181,6 +199,36 @@ Returns scans from every device, newest first. `page` defaults to 1. `limit` def
 `GET /api/v1/devices/:deviceId/scans?page=1&limit=20`
 
 Returns scans for that device only, newest first. An unknown device returns `DEVICE_NOT_FOUND`.
+
+### Clear scans
+
+`DELETE /api/v1/scans`
+
+Deletes every row in the scan table. Devices are not deleted. After this, a code that was rejected as a duplicate can be submitted again.
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": 2
+  }
+}
+```
+
+### Clear scans
+
+`DELETE /api/v1/scans`
+
+Deletes every row in the scan table. Devices are not deleted. After this, a code that was rejected as a duplicate can be submitted again.
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": 2
+  }
+}
+```
 
 ### Get one scan
 
@@ -314,17 +362,9 @@ No `Authorization` header is required.
 
 Use the computer's LAN address for a physical phone. Android emulator: `http://10.0.2.2:3000`. iOS simulator: `http://localhost:3000`.
 
-### Continuous scanning
+### Duplicate codes
 
-The camera can read the same symbol several times in a row. Send each event. The API stores each one:
-
-```
-ABC123 at 10:01:01
-ABC123 at 10:01:05
-ABC123 at 10:01:10
-```
-
-Those are three scan rows.
+The camera can read the same symbol several times. Submit the first read. If `POST /api/v1/scans` returns `VALIDATION_ERROR` with message `This code already exists`, do not store another row. Clearing the list calls `DELETE /api/v1/scans`, which removes every scan. The same code can be scanned again after that.
 
 ### Offline
 

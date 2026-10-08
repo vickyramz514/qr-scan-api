@@ -131,13 +131,14 @@ describe('QR scan API', () => {
     expect(await prisma.device.count()).toBe(0);
   });
 
-  it('creates a QR scan and keeps repeated reads as separate records', async () => {
+  it('creates a QR scan and rejects a code that is already stored', async () => {
     await registerDevice();
+    await registerDevice(DEVICE_B, { platform: 'ios' });
     const before = await prisma.device.findUniqueOrThrow({ where: { deviceId: DEVICE_A } });
     await delay(30);
 
     const first = await submitScan(DEVICE_A, '  ABC123456  ', 'QR');
-    const second = await submitScan(DEVICE_A, 'ABC123456', 'QR');
+    const duplicate = await submitScan(DEVICE_B, 'ABC123456', 'BARCODE');
 
     expect(first.status).toBe(201);
     expect(first.body.success).toBe(true);
@@ -160,12 +161,39 @@ describe('QR scan API', () => {
       'type',
     ]);
 
-    expect(second.status).toBe(201);
-    expect(second.body.data.id).not.toBe(first.body.data.id);
-    expect(await prisma.scan.count()).toBe(2);
+    expect(duplicate.status).toBe(400);
+    expect(duplicate.body).toEqual({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'This code already exists',
+        details: [{ path: 'code', message: 'This code already exists' }],
+      },
+    });
+    expect(await prisma.scan.count()).toBe(1);
 
     const after = await prisma.device.findUniqueOrThrow({ where: { deviceId: DEVICE_A } });
     expect(after.lastSeenAt.getTime()).toBeGreaterThan(before.lastSeenAt.getTime());
+  });
+
+  it('clears every row in the scan table and leaves devices in place', async () => {
+    await registerDevice(DEVICE_A);
+    await registerDevice(DEVICE_B, { platform: 'ios' });
+    await submitScan(DEVICE_A, 'ONE', 'QR');
+    await submitScan(DEVICE_B, 'TWO', 'BARCODE');
+
+    const response = await request(app).delete('/api/v1/scans');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      success: true,
+      data: { deleted: 2 },
+    });
+    expect(await prisma.scan.count()).toBe(0);
+    expect(await prisma.device.count()).toBe(2);
+
+    const again = await submitScan(DEVICE_A, 'ONE', 'QR');
+    expect(again.status).toBe(201);
   });
 
   it('creates a barcode scan', async () => {

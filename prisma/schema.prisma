@@ -38,6 +38,7 @@ model Scan {
   createdAt DateTime   @default(now())
   device    Device     @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
 
+  @@unique([code])
   @@index([deviceId])
   @@index([createdAt])
   @@index([type])

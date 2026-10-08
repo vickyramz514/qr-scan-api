@@ -19,7 +19,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: getCorsOrigin(),
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept'],
     maxAge: 600,
   }),

@@ -12,6 +12,12 @@ export type ListScansParams = {
   limit: number;
 };
 
+export async function findScanByCode(code: string): Promise<Scan | null> {
+  return prisma.scan.findFirst({
+    where: { code },
+  });
+}
+
 export async function createScan(input: CreateScanRecord): Promise<Scan> {
   return prisma.$transaction(async (tx) => {
     await tx.device.update({
@@ -66,4 +72,9 @@ export async function findScanById(id: string): Promise<Scan | null> {
   return prisma.scan.findUnique({
     where: { id },
   });
+}
+
+export async function deleteAllScans(): Promise<number> {
+  const result = await prisma.scan.deleteMany();
+  return result.count;
 }
