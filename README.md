@@ -66,6 +66,53 @@ Swagger UI for client testing: [http://localhost:3000/api/docs](http://localhost
 
 On Railway, open `https://YOUR_SERVICE_DOMAIN/api/docs`. The raw spec is at `/api/docs/openapi.json`.
 
+The geofencing app (`geofencing-poc`) calls these routes on the API base URL. The same handlers are also mounted under `/api/v1`.
+
+`POST /api/locations`
+
+```json
+{
+  "latitude": 13.0827,
+  "longitude": 80.2707,
+  "accuracy": 10,
+  "timestamp": "2026-10-10T10:00:00.000Z"
+}
+```
+
+`POST /api/geofence-events`
+
+```json
+{
+  "eventId": "school-001:ENTER:1690000000000:ab12cd34",
+  "schoolId": "school-001",
+  "eventType": "ENTER",
+  "latitude": 13.0827,
+  "longitude": 80.2707,
+  "accuracy": 10,
+  "eventTime": "2026-10-10T10:00:00.000Z"
+}
+```
+
+`POST /api/deliveries/route-001/status`
+
+```json
+{
+  "schoolId": "school-001",
+  "status": "IN_TRANSIT"
+}
+```
+
+A successful call includes top-level `receivedAt`, which is the field the app reads. GPS coordinates and geofence events are not cryptographic proof that a person was physically inside a school. An ENTER event does not change delivery status.
+
+There is no login middleware in this API. A bearer token is ignored. Send `X-Device-Id` when the phone has already registered with `POST /api/v1/devices`; otherwise the location is stored as unassigned. School and delivery permission checks cannot be tied to a user until an account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
+
+Optional environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LOCATION_MIN_MOVE_METERS` | `25` | Skip a location write when the device has moved less than this and the fix is also recent. |
+| `LOCATION_MIN_INTERVAL_MS` | `20000` | Skip a location write when the newer fix is closer than this and has not moved enough. |
+
 Base path: `/api/v1`
 
 ### Health check

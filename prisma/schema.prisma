@@ -19,14 +19,130 @@ enum ScanStatus {
 }
 
 model Device {
-  deviceId   String   @id
-  platform   String
-  appVersion String?
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @updatedAt
-  scans      Scan[]
+  deviceId         String             @id
+  platform         String
+  appVersion       String?
+  createdAt        DateTime           @default(now())
+  lastSeenAt       DateTime           @updatedAt
+  scans            Scan[]
+  currentLocation  DeviceLocation?
+  locationSamples  LocationSample[]
+  geofenceEvents   GeofenceEvent[]
+  deliverySchools  DeliverySchool[]
 
   @@index([platform])
+}
+
+enum GeofenceEventType {
+  ENTER
+  EXIT
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  ARRIVED
+  DELIVERED
+  FITTING_IN_PROGRESS
+  COMPLETED
+}
+
+model School {
+  id           String           @id
+  name         String
+  latitude     Float
+  longitude    Float
+  radiusMeters Int              @default(200)
+  active       Boolean          @default(true)
+  address      String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  events       GeofenceEvent[]
+  deliveries   DeliverySchool[]
+
+  @@index([active])
+}
+
+model Delivery {
+  id        String           @id
+  name      String
+  createdAt DateTime         @default(now())
+  schools   DeliverySchool[]
+}
+
+model DeliverySchool {
+  deliveryId String
+  schoolId   String
+  deviceId   String?
+  status     DeliveryStatus @default(PENDING)
+  updatedAt  DateTime       @updatedAt
+  delivery   Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  school     School         @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  device     Device?        @relation(fields: [deviceId], references: [deviceId], onDelete: SetNull)
+  history    DeliveryStatusEvent[]
+
+  @@id([deliveryId, schoolId])
+  @@index([schoolId])
+  @@index([deviceId])
+  @@index([status])
+}
+
+model DeliveryStatusEvent {
+  id             String          @id @default(uuid()) @db.Uuid
+  deliveryId     String
+  schoolId       String
+  fromStatus     DeliveryStatus?
+  toStatus       DeliveryStatus
+  changedAt      DateTime        @default(now())
+  deliverySchool DeliverySchool  @relation(fields: [deliveryId, schoolId], references: [deliveryId, schoolId], onDelete: Cascade)
+
+  @@index([deliveryId, schoolId, changedAt])
+}
+
+model DeviceLocation {
+  trackerId  String   @id
+  deviceId   String?  @unique
+  latitude   Float
+  longitude  Float
+  accuracy   Float
+  recordedAt DateTime
+  receivedAt DateTime @updatedAt
+  device     Device?  @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+
+  @@index([recordedAt])
+}
+
+model LocationSample {
+  id         String   @id @default(uuid()) @db.Uuid
+  trackerId  String
+  deviceId   String?
+  latitude   Float
+  longitude  Float
+  accuracy   Float
+  recordedAt DateTime
+  receivedAt DateTime @default(now())
+  device     Device?  @relation(fields: [deviceId], references: [deviceId], onDelete: SetNull)
+
+  @@index([trackerId, recordedAt])
+  @@index([deviceId, recordedAt])
+}
+
+model GeofenceEvent {
+  id         String            @id
+  schoolId   String
+  deviceId   String?
+  eventType  GeofenceEventType
+  latitude   Float
+  longitude  Float
+  accuracy   Float
+  eventTime  DateTime
+  receivedAt DateTime          @default(now())
+  school     School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  device     Device?           @relation(fields: [deviceId], references: [deviceId], onDelete: SetNull)
+
+  @@index([schoolId, eventTime])
+  @@index([deviceId, eventTime])
+  @@index([receivedAt])
 }
 
 model Scan {

@@ -6,8 +6,11 @@ import { env, getCorsOrigin } from './config/env';
 import { mountSwagger } from './docs/swagger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { notFoundMiddleware } from './middleware/notFound.middleware';
+import { deliveryRouter } from './routes/delivery.routes';
 import { deviceRouter } from './routes/device.routes';
+import { geofenceRouter } from './routes/geofence.routes';
 import { healthRouter } from './routes/health.routes';
+import { locationRouter } from './routes/location.routes';
 import { scanRouter } from './routes/scan.routes';
 import { logger } from './utils/logger';
 
@@ -34,7 +37,7 @@ app.use(
   cors({
     origin: getCorsOrigin(),
     methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Idempotency-Key', 'X-Device-Id'],
     maxAge: 600,
   }),
 );
@@ -88,6 +91,12 @@ app.use((req, res, next) => {
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/devices', deviceRouter);
 app.use('/api/v1/scans', scanRouter);
+app.use('/api/locations', locationRouter);
+app.use('/api/v1/locations', locationRouter);
+app.use('/api/geofence-events', geofenceRouter);
+app.use('/api/v1/geofence-events', geofenceRouter);
+app.use('/api/deliveries', deliveryRouter);
+app.use('/api/v1/deliveries', deliveryRouter);
 mountSwagger(app);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

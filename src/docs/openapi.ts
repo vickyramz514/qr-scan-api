@@ -16,6 +16,9 @@ export const openApiSpec = {
     { name: 'Health', description: 'Service status' },
     { name: 'Devices', description: 'Device registration and device scan history' },
     { name: 'Scans', description: 'Submit, list, fetch, and clear scans' },
+    { name: 'Locations', description: 'GPS updates from the geofencing app' },
+    { name: 'Geofence', description: 'School ENTER and EXIT events' },
+    { name: 'Deliveries', description: 'Per-school delivery status' },
   ],
   paths: {
     '/api/v1/health': {
@@ -201,9 +204,147 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/locations': {
+      post: {
+        tags: ['Locations'],
+        summary: 'Upload a GPS fix',
+        description:
+          'Used by the geofencing app. The same route is also available at /api/v1/locations. A fix that has not moved at least 25 metres and is newer by less than 20 seconds is acknowledged without a new database write. An older fix does not replace a newer one. Send X-Device-Id to attach the fix to a registered device. GPS coordinates are not proof of physical presence.',
+        operationId: 'recordLocation',
+        parameters: [{ $ref: '#/components/parameters/deviceHeader' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/LocationRequest' },
+              example: {
+                latitude: 13.0827,
+                longitude: 80.2707,
+                accuracy: 10,
+                timestamp: '2026-10-10T10:00:00.000Z',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Location accepted. stored is false when the fix was ignored as insignificant.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/LocationResponse' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '404': { $ref: '#/components/responses/DeviceNotFound' },
+        },
+      },
+    },
+    '/api/geofence-events': {
+      post: {
+        tags: ['Geofence'],
+        summary: 'Record an ENTER or EXIT event',
+        description:
+          'Idempotent on eventId. A duplicate returns the original event. Events may arrive out of time order and are stored with both eventTime and receivedAt. This does not change delivery status. GPS events are not cryptographic proof of presence. Also available at /api/v1/geofence-events.',
+        operationId: 'recordGeofenceEvent',
+        parameters: [
+          { $ref: '#/components/parameters/deviceHeader' },
+          {
+            name: 'Idempotency-Key',
+            in: 'header',
+            required: false,
+            schema: { type: 'string' },
+            description: 'When sent, it must equal eventId.',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/GeofenceEventRequest' },
+              example: {
+                eventId: 'school-001:ENTER:1690000000000:ab12cd34',
+                schoolId: 'school-001',
+                eventType: 'ENTER',
+                latitude: 13.0827,
+                longitude: 80.2707,
+                accuracy: 10,
+                eventTime: '2026-10-10T10:00:00.000Z',
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Event stored',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GeofenceEventResponse' },
+              },
+            },
+          },
+          '200': {
+            description: 'Duplicate eventId. The original event is returned.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GeofenceEventResponse' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '404': { $ref: '#/components/responses/SchoolNotFound' },
+        },
+      },
+    },
+    '/api/deliveries/{deliveryId}/status': {
+      post: {
+        tags: ['Deliveries'],
+        summary: 'Advance a school delivery status',
+        description:
+          'Allowed steps are PENDING, IN_TRANSIT, ARRIVED, DELIVERED, FITTING_IN_PROGRESS, COMPLETED, one step at a time. Repeating the current status is accepted. Geofence events do not call this route. Also available at /api/v1/deliveries/{deliveryId}/status.',
+        operationId: 'updateDeliveryStatus',
+        parameters: [
+          {
+            name: 'deliveryId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', example: 'route-001' },
+          },
+          { $ref: '#/components/parameters/deviceHeader' },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/DeliveryStatusRequest' },
+              example: { schoolId: 'school-001', status: 'IN_TRANSIT' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Status updated or already at the requested status',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeliveryStatusResponse' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '404': { $ref: '#/components/responses/DeliveryNotFound' },
+        },
+      },
+    },
   },
   components: {
     parameters: {
+      deviceHeader: {
+        name: 'X-Device-Id',
+        in: 'header',
+        required: false,
+        description: 'Registered device id. Omit it to store the update without a device.',
+        schema: { type: 'string', example: '8f3a7c2e-91b4-4e2a-9f31' },
+      },
       deviceId: {
         name: 'deviceId',
         in: 'path',
@@ -259,6 +400,30 @@ export const openApiSpec = {
                 code: 'DEVICE_NOT_FOUND',
                 message: 'Device is not registered',
               },
+            },
+          },
+        },
+      },
+      SchoolNotFound: {
+        description: 'School does not exist',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+            example: {
+              success: false,
+              error: { code: 'SCHOOL_NOT_FOUND', message: 'School not found' },
+            },
+          },
+        },
+      },
+      DeliveryNotFound: {
+        description: 'Delivery does not exist or is not assigned to the school',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+            example: {
+              success: false,
+              error: { code: 'DELIVERY_NOT_FOUND', message: 'Delivery not found' },
             },
           },
         },
@@ -432,6 +597,79 @@ export const openApiSpec = {
               },
             },
           },
+        },
+      },
+      LocationRequest: {
+        type: 'object',
+        required: ['latitude', 'longitude', 'accuracy', 'timestamp'],
+        properties: {
+          latitude: { type: 'number', minimum: -90, maximum: 90, example: 13.0827 },
+          longitude: { type: 'number', minimum: -180, maximum: 180, example: 80.2707 },
+          accuracy: { type: 'number', minimum: 0, example: 10 },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+      LocationResponse: {
+        type: 'object',
+        required: ['success', 'receivedAt', 'data'],
+        properties: {
+          success: { type: 'boolean', example: true },
+          receivedAt: { type: 'string', format: 'date-time' },
+          data: {
+            type: 'object',
+            properties: {
+              trackerId: { type: 'string' },
+              deviceId: { type: 'string', nullable: true },
+              latitude: { type: 'number' },
+              longitude: { type: 'number' },
+              accuracy: { type: 'number' },
+              timestamp: { type: 'string', format: 'date-time' },
+              receivedAt: { type: 'string', format: 'date-time' },
+              stored: { type: 'boolean' },
+            },
+          },
+        },
+      },
+      GeofenceEventRequest: {
+        type: 'object',
+        required: ['eventId', 'schoolId', 'eventType', 'latitude', 'longitude', 'accuracy', 'eventTime'],
+        properties: {
+          eventId: { type: 'string', example: 'school-001:ENTER:1690000000000:ab12cd34' },
+          schoolId: { type: 'string', example: 'school-001' },
+          eventType: { type: 'string', enum: ['ENTER', 'EXIT'] },
+          latitude: { type: 'number' },
+          longitude: { type: 'number' },
+          accuracy: { type: 'number' },
+          eventTime: { type: 'string', format: 'date-time' },
+        },
+      },
+      GeofenceEventResponse: {
+        type: 'object',
+        required: ['success', 'receivedAt', 'data'],
+        properties: {
+          success: { type: 'boolean', example: true },
+          receivedAt: { type: 'string', format: 'date-time' },
+          data: { type: 'object' },
+        },
+      },
+      DeliveryStatusRequest: {
+        type: 'object',
+        required: ['schoolId', 'status'],
+        properties: {
+          schoolId: { type: 'string', example: 'school-001' },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'IN_TRANSIT', 'ARRIVED', 'DELIVERED', 'FITTING_IN_PROGRESS', 'COMPLETED'],
+          },
+        },
+      },
+      DeliveryStatusResponse: {
+        type: 'object',
+        required: ['success', 'receivedAt', 'data'],
+        properties: {
+          success: { type: 'boolean', example: true },
+          receivedAt: { type: 'string', format: 'date-time' },
+          data: { type: 'object' },
         },
       },
       ErrorResponse: {

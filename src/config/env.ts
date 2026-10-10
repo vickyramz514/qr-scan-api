@@ -10,6 +10,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default(''),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  LOCATION_MIN_MOVE_METERS: z.coerce.number().positive().default(25),
+  LOCATION_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(20_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

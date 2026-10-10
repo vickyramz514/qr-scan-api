@@ -20,6 +20,14 @@ export function sendSuccess<T>(res: Response, data: T, statusCode = 200): void {
   });
 }
 
+export function sendReceived<T>(res: Response, data: T, receivedAt: string, statusCode = 200): void {
+  res.status(statusCode).json({
+    success: true,
+    receivedAt,
+    data,
+  });
+}
+
 export function sendMessage(res: Response, message: string, statusCode = 200): void {
   res.status(statusCode).json({
     success: true,
