@@ -7,6 +7,7 @@ import { mountSwagger } from './docs/swagger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { notFoundMiddleware } from './middleware/notFound.middleware';
 import { deliveryRouter } from './routes/delivery.routes';
+import { adminRouter } from './routes/admin.routes';
 import { deviceRouter } from './routes/device.routes';
 import { geofenceRouter } from './routes/geofence.routes';
 import { healthRouter } from './routes/health.routes';
@@ -48,7 +49,7 @@ app.use(
     limit: env.RATE_LIMIT_MAX_REQUESTS,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/api/v1/health' || req.path.startsWith('/api/docs'),
+    skip: (req) => req.path === '/health' || req.path === '/api/v1/health' || req.path.startsWith('/api/docs'),
     handler: (_req, res) => {
       res.status(429).json({
         success: false,
@@ -89,6 +90,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/v1/health', healthRouter);
+app.use('/health', healthRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/v1/devices', deviceRouter);
 app.use('/api/v1/scans', scanRouter);
 app.use('/api/locations', locationRouter);

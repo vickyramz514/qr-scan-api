@@ -106,6 +106,18 @@ A successful call includes top-level `receivedAt`, which is the field the app re
 
 There is no login middleware in this API. A bearer token is ignored. Send `X-Device-Id` when the phone has already registered with `POST /api/v1/devices`; otherwise the location is stored as unassigned. School and delivery permission checks cannot be tied to a user until an account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
 
+### Admin dashboard
+
+`GET /api/admin/data` returns active school geofences as offices, each with presence inferred from its latest geofence event, plus location samples, geofence events, and delivery status history. Each history list has its own `data` and `pagination` fields and uses the same `page` and `limit` query parameters (defaults: page 1, limit 20; limit is capped at 100).
+
+Optional filters: `schoolId` filters the office, event, and delivery data; `deviceId` filters location, event, delivery history, and presence. Location samples do not belong to a school in the current data model, so `schoolId` does not filter them. For example:
+
+```text
+GET /api/admin/data?page=1&limit=50&schoolId=school-001
+```
+
+Presence is `PRESENT` when the latest event is `ENTER`, and `ABSENT` when it is `EXIT` or no event exists. This endpoint currently has no authentication or authorization and should only be exposed to trusted clients until admin access control is added.
+
 Optional environment variables:
 
 | Variable | Default | Purpose |
