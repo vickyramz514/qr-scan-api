@@ -124,7 +124,8 @@ model LocationSample {
   device     Device?  @relation(fields: [deviceId], references: [deviceId], onDelete: SetNull)
 
   @@index([trackerId, recordedAt])
-  @@index([deviceId, recordedAt])
+  @@index([deviceId, recordedAt, receivedAt], map: "LocationSample_deviceId_recordedAt_receivedAt_idx")
+  @@index([recordedAt, deviceId], map: "LocationSample_recordedAt_deviceId_idx")
 }
 
 model GeofenceEvent {

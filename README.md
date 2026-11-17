@@ -126,6 +126,20 @@ GET /api/admin/dashboard?page=1&limit=25&staleMinutes=20
 
 The response includes the thresholds used under `definitions`; each list has its own `data` and `pagination` fields. This endpoint has the same authentication limitation as `/api/admin/data`.
 
+### Admin GPS locations
+
+- `GET /api/admin/locations/latest` returns the newest GPS sample per registered device.
+- `GET /api/admin/locations/history` returns GPS sample history.
+- `GET /api/admin/locations/:deviceId` returns one registered device's GPS history.
+
+The list and device routes support `from` and `to` ISO 8601 timestamps (inclusive), `page` (default `1`), and `limit` (default `20`, maximum `100`). The latest and history list routes also accept `schoolId` and `deviceId`. Each row contains coordinates, accuracy, recorded and received timestamps, device details, and matched school details when applicable. Since location samples do not store a school ID, the API associates a point with the closest active school geofence that contains it; a point outside all active geofences has `school: null`.
+
+```text
+GET /api/admin/locations/history?deviceId=device-123&from=2026-11-17T00:00:00Z&to=2026-11-17T23:59:59Z&page=1&limit=50
+GET /api/admin/locations/latest?schoolId=school-001
+GET /api/admin/locations/device-123?from=2026-11-17T00:00:00Z
+```
+
 Optional environment variables:
 
 | Variable | Default | Purpose |

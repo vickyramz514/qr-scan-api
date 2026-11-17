@@ -1,6 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
-import { AdminDashboardQuery, AdminDataQuery } from '../validators/admin.validator';
+import {
+  AdminDashboardQuery,
+  AdminDataQuery,
+} from '../validators/admin.validator';
+import { AppError } from '../utils/errors';
 
 type PresenceRow = {
   deviceId: string;
@@ -10,6 +14,36 @@ type PresenceRow = {
   accuracy: number;
   recordedAt: Date;
   receivedAt: Date;
+};
+
+type AdminLocationRow = {
+  id: string;
+  trackerId: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  recordedAt: Date;
+  receivedAt: Date;
+  deviceId: string;
+  platform: string;
+  appVersion: string | null;
+  deviceLastSeenAt: Date;
+  schoolId: string | null;
+  schoolName: string | null;
+  schoolLatitude: number | null;
+  schoolLongitude: number | null;
+  schoolRadiusMeters: number | null;
+  schoolAddress: string | null;
+};
+
+type AdminLocationFilters = {
+  schoolId?: string | undefined;
+  deviceId?: string | undefined;
+  from?: string | undefined;
+  to?: string | undefined;
+  page: number;
+  limit: number;
+  latestPerDevice: boolean;
 };
 
 function geofencePresenceCondition(): Prisma.Sql {
@@ -51,6 +85,107 @@ async function getPresencePage(inside: boolean, page: number, limit: number) {
   ]);
   const total = Number(countRows[0]?.total ?? 0n);
   return { data: rows, pagination: pageInfo(page, limit, total) };
+}
+
+function locationBaseQuery(filters: AdminLocationFilters): Prisma.Sql {
+  const where: Prisma.Sql[] = [Prisma.sql`ls."deviceId" IS NOT NULL`];
+  if (filters.deviceId) where.push(Prisma.sql`ls."deviceId" = ${filters.deviceId}`);
+  if (filters.from) where.push(Prisma.sql`ls."recordedAt" >= ${new Date(filters.from)}`);
+  if (filters.to) where.push(Prisma.sql`ls."recordedAt" <= ${new Date(filters.to)}`);
+
+  const selection = filters.latestPerDevice
+    ? Prisma.sql`SELECT DISTINCT ON (ls."deviceId") ls.* FROM "LocationSample" AS ls WHERE ${Prisma.join(where, ' AND ')} ORDER BY ls."deviceId", ls."recordedAt" DESC, ls."receivedAt" DESC`
+    : Prisma.sql`SELECT ls.* FROM "LocationSample" AS ls WHERE ${Prisma.join(where, ' AND ')}`;
+  return Prisma.sql`WITH "filteredLocations" AS (${selection})`;
+}
+
+function schoolLateralJoin(schoolId?: string): Prisma.Sql {
+  const schoolFilter = schoolId ? Prisma.sql`AND s."id" = ${schoolId}` : Prisma.empty;
+  return Prisma.sql`LEFT JOIN LATERAL (
+    SELECT s."id", s."name", s."latitude", s."longitude", s."radiusMeters", s."address",
+      2 * 6371000 * asin(sqrt(LEAST(1,
+        POWER(sin(radians((s."latitude" - fl."latitude") / 2)), 2)
+        + cos(radians(fl."latitude")) * cos(radians(s."latitude"))
+        * POWER(sin(radians((s."longitude" - fl."longitude") / 2)), 2)
+      ))) AS "distanceMeters"
+    FROM "School" AS s
+    WHERE s."active" = true AND s."radiusMeters" > 0
+      ${schoolFilter}
+      AND 2 * 6371000 * asin(sqrt(LEAST(1,
+        POWER(sin(radians((s."latitude" - fl."latitude") / 2)), 2)
+        + cos(radians(fl."latitude")) * cos(radians(s."latitude"))
+        * POWER(sin(radians((s."longitude" - fl."longitude") / 2)), 2)
+      ))) <= s."radiusMeters"
+    ORDER BY "distanceMeters" ASC, s."id" ASC
+    LIMIT 1
+  ) AS matchedSchool ON true`;
+}
+
+export async function getAdminLocations(filters: AdminLocationFilters) {
+  if (filters.deviceId) {
+    const device = await prisma.device.findUnique({ where: { deviceId: filters.deviceId }, select: { deviceId: true } });
+    if (!device) throw new AppError(404, 'DEVICE_NOT_FOUND', 'Device is not registered');
+  }
+
+  const base = locationBaseQuery(filters);
+  const schoolJoin = schoolLateralJoin(filters.schoolId);
+  const schoolCondition = filters.schoolId ? Prisma.sql`WHERE matchedSchool."id" IS NOT NULL` : Prisma.empty;
+  const skip = (filters.page - 1) * filters.limit;
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRaw<AdminLocationRow[]>(Prisma.sql`
+      ${base}
+      SELECT fl."id", fl."trackerId", fl."latitude", fl."longitude", fl."accuracy",
+        fl."recordedAt", fl."receivedAt", d."deviceId", d."platform", d."appVersion",
+        d."lastSeenAt" AS "deviceLastSeenAt", matchedSchool."id" AS "schoolId",
+        matchedSchool."name" AS "schoolName", matchedSchool."latitude" AS "schoolLatitude",
+        matchedSchool."longitude" AS "schoolLongitude", matchedSchool."radiusMeters" AS "schoolRadiusMeters",
+        matchedSchool."address" AS "schoolAddress"
+      FROM "filteredLocations" AS fl
+      INNER JOIN "Device" AS d ON d."deviceId" = fl."deviceId"
+      ${schoolJoin}
+      ${schoolCondition}
+      ORDER BY fl."recordedAt" DESC, fl."receivedAt" DESC, fl."deviceId" ASC
+      LIMIT ${filters.limit} OFFSET ${skip}
+    `),
+    prisma.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`
+      ${base}
+      SELECT COUNT(*)::bigint AS total
+      FROM "filteredLocations" AS fl
+      INNER JOIN "Device" AS d ON d."deviceId" = fl."deviceId"
+      ${schoolJoin}
+      ${schoolCondition}
+    `),
+  ]);
+  const total = Number(countRows[0]?.total ?? 0n);
+
+  return {
+    data: rows.map((row) => ({
+      id: row.id,
+      trackerId: row.trackerId,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      accuracy: row.accuracy,
+      recordedAt: row.recordedAt,
+      receivedAt: row.receivedAt,
+      device: {
+        deviceId: row.deviceId,
+        platform: row.platform,
+        appVersion: row.appVersion,
+        lastSeenAt: row.deviceLastSeenAt,
+      },
+      school: row.schoolId
+        ? {
+            id: row.schoolId,
+            name: row.schoolName,
+            latitude: row.schoolLatitude,
+            longitude: row.schoolLongitude,
+            radiusMeters: row.schoolRadiusMeters,
+            address: row.schoolAddress,
+          }
+        : null,
+    })),
+    pagination: pageInfo(filters.page, filters.limit, total),
+  };
 }
 
 export async function getAdminData(query: AdminDataQuery) {
