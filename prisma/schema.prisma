@@ -22,6 +22,7 @@ model Device {
   deviceId          String           @id
   platform          String
   appVersion        String?
+  active            Boolean          @default(true)
   createdAt         DateTime         @default(now())
   lastSeenAt        DateTime         @updatedAt
   scans             Scan[]

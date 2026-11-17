@@ -13,10 +13,18 @@ import {
   listAdminGeofenceEvents,
   getAdminGeofenceEvent,
   exportAdminGeofenceEvents,
+  listAdminDevices,
+  getAdminDevice,
+  createAdminDevice,
+  updateAdminDevice,
+  updateAdminDeviceStatus,
 } from '../controllers/admin.controller';
 import { asyncHandler } from '../utils/asyncHandler';
+import { requireAdmin } from '../middleware/admin-auth.middleware';
 
 export const adminRouter = Router();
+
+adminRouter.use(requireAdmin);
 
 adminRouter.get('/data', asyncHandler(getAdminData));
 adminRouter.get('/dashboard', asyncHandler(getAdminDashboard));
@@ -31,3 +39,8 @@ adminRouter.delete('/schools/:id', asyncHandler(deleteAdminSchool));
 adminRouter.get('/geofence-events', asyncHandler(listAdminGeofenceEvents));
 adminRouter.get('/geofence-events/export', asyncHandler(exportAdminGeofenceEvents));
 adminRouter.get('/geofence-events/:id', asyncHandler(getAdminGeofenceEvent));
+adminRouter.get('/devices', asyncHandler(listAdminDevices));
+adminRouter.post('/devices', asyncHandler(createAdminDevice));
+adminRouter.get('/devices/:id', asyncHandler(getAdminDevice));
+adminRouter.put('/devices/:id', asyncHandler(updateAdminDevice));
+adminRouter.patch('/devices/:id/status', asyncHandler(updateAdminDeviceStatus));

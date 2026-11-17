@@ -104,7 +104,7 @@ The geofencing app (`geofencing-poc`) calls these routes on the API base URL. Th
 
 A successful call includes top-level `receivedAt`, which is the field the app reads. GPS coordinates and geofence events are not cryptographic proof that a person was physically inside a school. An ENTER event does not change delivery status.
 
-There is no login middleware in this API. A bearer token is ignored. Send `X-Device-Id` when the phone has already registered with `POST /api/v1/devices`; otherwise the location is stored as unassigned. School and delivery permission checks cannot be tied to a user until an account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
+Mobile endpoints do not require user login. Send `X-Device-Id` when the phone has already registered with `POST /api/v1/devices`; otherwise the location is stored as unassigned. School and delivery permission checks cannot be tied to a user until a mobile account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
 
 ### Admin dashboard
 
@@ -116,7 +116,7 @@ Optional filters: `schoolId` filters the office, event, and delivery data; `devi
 GET /api/admin/data?page=1&limit=50&schoolId=school-001
 ```
 
-Presence is `PRESENT` when the latest event is `ENTER`, and `ABSENT` when it is `EXIT` or no event exists. This endpoint currently has no authentication or authorization and should only be exposed to trusted clients until admin access control is added.
+Presence is `PRESENT` when the latest event is `ENTER`, and `ABSENT` when it is `EXIT` or no event exists.
 
 `GET /api/admin/dashboard` returns dashboard metrics plus paginated latest GPS locations, devices inside and outside active geofences, and devices with stale GPS. Query parameters are `page` (default `1`), `limit` (default `20`, maximum `100`), and `staleMinutes` (default `15`, range `1`–`1440`). Devices are active when their last-seen time is within 24 hours. Devices without a current location are included in the stale list. Today's ENTER and EXIT events use the UTC calendar day. A configured geofence is an active school with a positive radius; presence is calculated from each device's current location and active school geofence centers.
 
@@ -152,7 +152,7 @@ The school management routes are `GET /api/admin/schools`, `GET /api/admin/schoo
 { "type": "POLYGON", "coordinates": [{ "latitude": 13.08, "longitude": 80.27 }, { "latitude": 13.09, "longitude": 80.27 }, { "latitude": 13.085, "longitude": 80.28 }] }
 ```
 
-Create also requires an `id` and `name`; both create and update may include `active`, `address`, and a complete `deviceIds` array to assign devices. Polygon coordinates are validated for bounds, unique vertices, non-zero area, and self-intersections. DELETE deactivates the school and clears its device assignments while retaining historical geofence events and delivery records. School shape and assignment changes are applied transactionally. Apply the schema migration with `npx prisma migrate deploy` before using these routes. Admin routes currently have no authentication or authorization.
+Create also requires an `id` and `name`; both create and update may include `active`, `address`, and a complete `deviceIds` array to assign devices. Polygon coordinates are validated for bounds, unique vertices, non-zero area, and self-intersections. DELETE deactivates the school and clears its device assignments while retaining historical geofence events and delivery records. School shape and assignment changes are applied transactionally. Apply the schema migration with `npx prisma migrate deploy` before using these routes.
 
 ### Admin geofence event history
 
@@ -162,6 +162,14 @@ Create also requires an `id` and `name`; both create and update may include `act
 GET /api/admin/geofence-events?schoolId=school-001&eventType=ENTER&page=1&limit=50
 GET /api/admin/geofence-events/export?deviceId=device-123&from=2026-11-17T00:00:00Z
 ```
+
+### Admin device management
+
+`GET /api/admin/devices` lists devices, `GET /api/admin/devices/:id` returns one device, `POST /api/admin/devices` registers one, `PUT /api/admin/devices/:id` updates platform, app version, and/or the complete school assignment list, and `PATCH /api/admin/devices/:id/status` changes active state with `{ "active": false }`. Lists support `page`, `limit`, `active=true|false`, `schoolId`, and `search`. Responses include last-seen time, latest GPS location, assigned school geofences, and presence (`INSIDE`, `OUTSIDE`, or `UNKNOWN`) based on the current location and assigned active geofences.
+
+Device registration accepts `{ "deviceId": "device-123456", "platform": "android", "appVersion": "1.0.0", "schoolIds": ["school-001"] }`. Device and school assignment writes are transactional; only active, existing schools can be assigned.
+
+All `/api/admin/*` routes require `Authorization: Bearer <ADMIN_API_TOKEN>`. Set `ADMIN_API_TOKEN` to a secret of at least 32 characters. Admin requests return 503 if the token is not configured in development; the server refuses production startup without it. For example, generate a token with `openssl rand -base64 32` and configure the same value in the API and trusted admin portal.
 
 Optional environment variables:
 
@@ -564,6 +572,7 @@ curl 'http://localhost:3000/api/v1/devices/8f3a7c2e-91b4-4e2a-9f31/scans?page=1&
 | `PORT` | HTTP port. Default `3000`. |
 | `NODE_ENV` | `development`, `test`, or `production`. |
 | `DATABASE_URL` | PostgreSQL connection string. Required. |
+| `ADMIN_API_TOKEN` | Admin bearer token (minimum 32 characters); required in production. |
 | `CORS_ORIGIN` | `*` allows any browser origin. A comma-separated list allows those origins. Empty disables cross-origin browser access. React Native does not use CORS. |
 | `RATE_LIMIT_WINDOW_MS` | Rate-limit window. Default 15 minutes. |
 | `RATE_LIMIT_MAX_REQUESTS` | Max requests per IP per window. Health checks are excluded. |

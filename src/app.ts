@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: getCorsOrigin(),
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Idempotency-Key', 'X-Device-Id'],
     maxAge: 600,
   }),

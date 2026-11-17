@@ -17,6 +17,13 @@ import {
   geofenceEventIdSchema,
   geofenceEventListQuerySchema,
 } from '../validators/geofence-event-admin.validator';
+import * as deviceAdminService from '../services/device-admin.service';
+import {
+  createDeviceAdminSchema,
+  listDevicesQuerySchema,
+  updateDeviceAdminSchema,
+  updateDeviceStatusSchema,
+} from '../validators/device-admin.validator';
 
 export async function getAdminData(req: Request, res: Response): Promise<void> {
   const query = adminDataQuerySchema.parse(req.query);
@@ -106,4 +113,38 @@ export async function exportAdminGeofenceEvents(req: Request, res: Response): Pr
     .set('X-Total-Count', String(result.total))
     .set('X-Export-Truncated', String(result.truncated))
     .send(geofenceEventAdminService.geofenceEventsToCsv(result.events));
+}
+
+export async function listAdminDevices(req: Request, res: Response): Promise<void> {
+  const query = listDevicesQuerySchema.parse(req.query);
+  const result = await deviceAdminService.listDevices(query);
+  res.status(200).json({ success: true, ...result });
+}
+
+export async function getAdminDevice(req: Request, res: Response): Promise<void> {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsedId = deviceIdSchema.safeParse(rawId);
+  if (!parsedId.success) throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
+  sendSuccess(res, await deviceAdminService.getDevice(parsedId.data));
+}
+
+export async function createAdminDevice(req: Request, res: Response): Promise<void> {
+  const input = createDeviceAdminSchema.parse(req.body);
+  sendSuccess(res, await deviceAdminService.createDevice(input), 201);
+}
+
+export async function updateAdminDevice(req: Request, res: Response): Promise<void> {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsedId = deviceIdSchema.safeParse(rawId);
+  if (!parsedId.success) throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
+  const input = updateDeviceAdminSchema.parse(req.body);
+  sendSuccess(res, await deviceAdminService.updateDevice(parsedId.data, input));
+}
+
+export async function updateAdminDeviceStatus(req: Request, res: Response): Promise<void> {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsedId = deviceIdSchema.safeParse(rawId);
+  if (!parsedId.success) throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
+  const input = updateDeviceStatusSchema.parse(req.body);
+  sendSuccess(res, await deviceAdminService.updateDeviceStatus(parsedId.data, input.active));
 }

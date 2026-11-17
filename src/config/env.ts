@@ -7,11 +7,16 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  ADMIN_API_TOKEN: z.string().min(32).optional(),
   CORS_ORIGIN: z.string().default(''),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
   LOCATION_MIN_MOVE_METERS: z.coerce.number().positive().default(25),
   LOCATION_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(20_000),
+}).superRefine((config, context) => {
+  if (config.NODE_ENV === 'production' && !config.ADMIN_API_TOKEN) {
+    context.addIssue({ code: 'custom', path: ['ADMIN_API_TOKEN'], message: 'ADMIN_API_TOKEN is required in production' });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
