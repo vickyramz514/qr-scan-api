@@ -248,7 +248,15 @@ export async function getAdminData(query: AdminDataQuery) {
 
   const [schools, latestEvents, locations, locationTotal, events, eventTotal, deliveries, deliveryTotal] =
     await Promise.all([
-      prisma.school.findMany({ where: schoolWhere, orderBy: { name: 'asc' } }),
+      prisma.school.findMany({
+        where: schoolWhere,
+        orderBy: { name: 'asc' },
+        include: {
+          deviceAssignments: {
+            include: { device: { select: { deviceId: true, platform: true, appVersion: true, active: true, lastSeenAt: true } } },
+          },
+        },
+      }),
       prisma.geofenceEvent.findMany({
         where: { ...(schoolId ? { schoolId } : {}), ...(deviceId ? { deviceId } : {}) },
         orderBy: { eventTime: 'desc' },
@@ -310,6 +318,12 @@ export async function getAdminData(query: AdminDataQuery) {
         latitude: school.latitude,
         longitude: school.longitude,
         radiusMeters: school.radiusMeters,
+        geofenceType: school.geofenceType,
+        polygonCoordinates: school.polygonCoordinates,
+        geofence: school.geofenceType === 'POLYGON'
+          ? { type: school.geofenceType, coordinates: school.polygonCoordinates }
+          : { type: school.geofenceType, latitude: school.latitude, longitude: school.longitude, radiusMeters: school.radiusMeters },
+        devices: school.deviceAssignments.map(({ device }) => device),
         presence: presence?.eventType === 'ENTER' ? 'PRESENT' : 'ABSENT',
         presenceUpdatedAt: presence?.eventTime ?? null,
         deviceId: presence?.deviceId ?? null,
