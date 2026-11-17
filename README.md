@@ -118,6 +118,14 @@ GET /api/admin/data?page=1&limit=50&schoolId=school-001
 
 Presence is `PRESENT` when the latest event is `ENTER`, and `ABSENT` when it is `EXIT` or no event exists. This endpoint currently has no authentication or authorization and should only be exposed to trusted clients until admin access control is added.
 
+`GET /api/admin/dashboard` returns dashboard metrics plus paginated latest GPS locations, devices inside and outside active geofences, and devices with stale GPS. Query parameters are `page` (default `1`), `limit` (default `20`, maximum `100`), and `staleMinutes` (default `15`, range `1`–`1440`). Devices are active when their last-seen time is within 24 hours. Devices without a current location are included in the stale list. Today's ENTER and EXIT events use the UTC calendar day. A configured geofence is an active school with a positive radius; presence is calculated from each device's current location and active school geofence centers.
+
+```text
+GET /api/admin/dashboard?page=1&limit=25&staleMinutes=20
+```
+
+The response includes the thresholds used under `definitions`; each list has its own `data` and `pagination` fields. This endpoint has the same authentication limitation as `/api/admin/data`.
+
 Optional environment variables:
 
 | Variable | Default | Purpose |
