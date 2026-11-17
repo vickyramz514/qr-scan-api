@@ -9,6 +9,14 @@ import {
 import { sendSuccess } from '../utils/apiResponse';
 import { AppError } from '../utils/errors';
 import { deviceIdSchema } from '../validators/device.validator';
+import * as schoolAdminService from '../services/school-admin.service';
+import { createSchoolSchema, listSchoolsQuerySchema, schoolIdSchema, updateSchoolSchema } from '../validators/school.validator';
+import * as geofenceEventAdminService from '../services/geofence-event-admin.service';
+import {
+  geofenceEventExportQuerySchema,
+  geofenceEventIdSchema,
+  geofenceEventListQuerySchema,
+} from '../validators/geofence-event-admin.validator';
 
 export async function getAdminData(req: Request, res: Response): Promise<void> {
   const query = adminDataQuerySchema.parse(req.query);
@@ -40,4 +48,62 @@ export async function getAdminDeviceLocations(req: Request, res: Response): Prom
     res,
     await adminService.getAdminLocations({ ...query, deviceId: parsedId.data, latestPerDevice: false }),
   );
+}
+
+function parseSchoolId(value: string | string[] | undefined): string {
+  const id = Array.isArray(value) ? value[0] : value;
+  const parsed = schoolIdSchema.safeParse(id);
+  if (!parsed.success) throw new AppError(400, 'INVALID_SCHOOL_ID', 'Invalid school id');
+  return parsed.data;
+}
+
+export async function listAdminSchools(req: Request, res: Response): Promise<void> {
+  const query = listSchoolsQuerySchema.parse(req.query);
+  const result = await schoolAdminService.listSchools(query);
+  res.status(200).json({ success: true, ...result });
+}
+
+export async function getAdminSchool(req: Request, res: Response): Promise<void> {
+  sendSuccess(res, await schoolAdminService.getSchool(parseSchoolId(req.params.id)));
+}
+
+export async function createAdminSchool(req: Request, res: Response): Promise<void> {
+  const input = createSchoolSchema.parse(req.body);
+  sendSuccess(res, await schoolAdminService.createSchool(input), 201);
+}
+
+export async function updateAdminSchool(req: Request, res: Response): Promise<void> {
+  const id = parseSchoolId(req.params.id);
+  const input = updateSchoolSchema.parse(req.body);
+  sendSuccess(res, await schoolAdminService.updateSchool(id, input));
+}
+
+export async function deleteAdminSchool(req: Request, res: Response): Promise<void> {
+  sendSuccess(res, await schoolAdminService.disableSchool(parseSchoolId(req.params.id)));
+}
+
+export async function listAdminGeofenceEvents(req: Request, res: Response): Promise<void> {
+  const query = geofenceEventListQuerySchema.parse(req.query);
+  const result = await geofenceEventAdminService.listGeofenceEvents(query);
+  res.status(200).json({ success: true, ...result });
+}
+
+export async function getAdminGeofenceEvent(req: Request, res: Response): Promise<void> {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsedId = geofenceEventIdSchema.safeParse(rawId);
+  if (!parsedId.success) throw new AppError(400, 'INVALID_GEOFENCE_EVENT_ID', 'Invalid geofence event id');
+  sendSuccess(res, await geofenceEventAdminService.getGeofenceEvent(parsedId.data));
+}
+
+export async function exportAdminGeofenceEvents(req: Request, res: Response): Promise<void> {
+  const query = geofenceEventExportQuerySchema.parse(req.query);
+  const result = await geofenceEventAdminService.exportGeofenceEvents(query);
+  const filename = `geofence-events-${new Date().toISOString().slice(0, 10)}.csv`;
+  res
+    .status(200)
+    .type('text/csv')
+    .set('Content-Disposition', `attachment; filename="${filename}"`)
+    .set('X-Total-Count', String(result.total))
+    .set('X-Export-Truncated', String(result.truncated))
+    .send(geofenceEventAdminService.geofenceEventsToCsv(result.events));
 }

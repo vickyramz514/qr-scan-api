@@ -34,6 +34,8 @@ type AdminLocationRow = {
   schoolLongitude: number | null;
   schoolRadiusMeters: number | null;
   schoolAddress: string | null;
+  schoolGeofenceType: string | null;
+  schoolPolygonCoordinates: Prisma.JsonValue | null;
 };
 
 type AdminLocationFilters = {
@@ -47,16 +49,35 @@ type AdminLocationFilters = {
 };
 
 function geofencePresenceCondition(): Prisma.Sql {
+  const polygonContainsPoint = (latitude: Prisma.Sql, longitude: Prisma.Sql) => Prisma.sql`EXISTS (
+    SELECT 1 FROM (
+      SELECT SUM(CASE
+        WHEN ((vertices."y1" > ${latitude}) <> (vertices."y2" > ${latitude}))
+          AND (${longitude} < (vertices."x2" - vertices."x1") * (${latitude} - vertices."y1") / NULLIF(vertices."y2" - vertices."y1", 0) + vertices."x1")
+        THEN 1 ELSE 0 END) AS crossings
+      FROM generate_series(0, jsonb_array_length(s."polygonCoordinates") - 1) AS edge(i)
+      CROSS JOIN LATERAL (
+        SELECT
+          (s."polygonCoordinates" -> edge.i ->> 'longitude')::double precision AS "x1",
+          (s."polygonCoordinates" -> edge.i ->> 'latitude')::double precision AS "y1",
+          (s."polygonCoordinates" -> ((edge.i + 1) % jsonb_array_length(s."polygonCoordinates")) ->> 'longitude')::double precision AS "x2",
+          (s."polygonCoordinates" -> ((edge.i + 1) % jsonb_array_length(s."polygonCoordinates")) ->> 'latitude')::double precision AS "y2"
+      ) AS vertices
+    ) AS crossings
+    WHERE crossings.crossings % 2 = 1
+  )`;
   return Prisma.sql`EXISTS (
     SELECT 1
     FROM "School" AS s
     WHERE s."active" = true
-      AND s."radiusMeters" > 0
-      AND 2 * 6371000 * asin(sqrt(LEAST(1,
-        POWER(sin(radians((s."latitude" - dl."latitude") / 2)), 2)
-        + cos(radians(dl."latitude")) * cos(radians(s."latitude"))
-        * POWER(sin(radians((s."longitude" - dl."longitude") / 2)), 2)
-      ))) <= s."radiusMeters"
+      AND (
+        (s."geofenceType" = 'CIRCLE' AND s."radiusMeters" > 0 AND 2 * 6371000 * asin(sqrt(LEAST(1,
+          POWER(sin(radians((s."latitude" - dl."latitude") / 2)), 2)
+          + cos(radians(dl."latitude")) * cos(radians(s."latitude"))
+          * POWER(sin(radians((s."longitude" - dl."longitude") / 2)), 2)
+        ))) <= s."radiusMeters")
+        OR (s."geofenceType" = 'POLYGON' AND ${polygonContainsPoint(Prisma.sql`dl."latitude"`, Prisma.sql`dl."longitude"`)})
+      )
   )`;
 }
 
@@ -99,23 +120,46 @@ function locationBaseQuery(filters: AdminLocationFilters): Prisma.Sql {
   return Prisma.sql`WITH "filteredLocations" AS (${selection})`;
 }
 
+function polygonContainsLocation(): Prisma.Sql {
+  return Prisma.sql`EXISTS (
+    SELECT 1 FROM (
+      SELECT SUM(CASE
+        WHEN ((vertices."y1" > fl."latitude") <> (vertices."y2" > fl."latitude"))
+          AND (fl."longitude" < (vertices."x2" - vertices."x1") * (fl."latitude" - vertices."y1") / NULLIF(vertices."y2" - vertices."y1", 0) + vertices."x1")
+        THEN 1 ELSE 0 END) AS crossings
+      FROM generate_series(0, jsonb_array_length(s."polygonCoordinates") - 1) AS edge(i)
+      CROSS JOIN LATERAL (
+        SELECT
+          (s."polygonCoordinates" -> edge.i ->> 'longitude')::double precision AS "x1",
+          (s."polygonCoordinates" -> edge.i ->> 'latitude')::double precision AS "y1",
+          (s."polygonCoordinates" -> ((edge.i + 1) % jsonb_array_length(s."polygonCoordinates")) ->> 'longitude')::double precision AS "x2",
+          (s."polygonCoordinates" -> ((edge.i + 1) % jsonb_array_length(s."polygonCoordinates")) ->> 'latitude')::double precision AS "y2"
+      ) AS vertices
+    ) AS crossings
+    WHERE crossings.crossings % 2 = 1
+  )`;
+}
+
 function schoolLateralJoin(schoolId?: string): Prisma.Sql {
   const schoolFilter = schoolId ? Prisma.sql`AND s."id" = ${schoolId}` : Prisma.empty;
   return Prisma.sql`LEFT JOIN LATERAL (
-    SELECT s."id", s."name", s."latitude", s."longitude", s."radiusMeters", s."address",
-      2 * 6371000 * asin(sqrt(LEAST(1,
+    SELECT s."id", s."name", s."latitude", s."longitude", s."radiusMeters", s."address", s."geofenceType", s."polygonCoordinates",
+      CASE WHEN s."geofenceType" = 'POLYGON' THEN 0 ELSE 2 * 6371000 * asin(sqrt(LEAST(1,
         POWER(sin(radians((s."latitude" - fl."latitude") / 2)), 2)
         + cos(radians(fl."latitude")) * cos(radians(s."latitude"))
         * POWER(sin(radians((s."longitude" - fl."longitude") / 2)), 2)
-      ))) AS "distanceMeters"
+      ))) END AS "distanceMeters"
     FROM "School" AS s
-    WHERE s."active" = true AND s."radiusMeters" > 0
+    WHERE s."active" = true AND (s."geofenceType" = 'POLYGON' OR s."radiusMeters" > 0)
       ${schoolFilter}
-      AND 2 * 6371000 * asin(sqrt(LEAST(1,
-        POWER(sin(radians((s."latitude" - fl."latitude") / 2)), 2)
-        + cos(radians(fl."latitude")) * cos(radians(s."latitude"))
-        * POWER(sin(radians((s."longitude" - fl."longitude") / 2)), 2)
-      ))) <= s."radiusMeters"
+      AND (
+        (s."geofenceType" = 'CIRCLE' AND 2 * 6371000 * asin(sqrt(LEAST(1,
+          POWER(sin(radians((s."latitude" - fl."latitude") / 2)), 2)
+          + cos(radians(fl."latitude")) * cos(radians(s."latitude"))
+          * POWER(sin(radians((s."longitude" - fl."longitude") / 2)), 2)
+        ))) <= s."radiusMeters")
+        OR (s."geofenceType" = 'POLYGON' AND ${polygonContainsLocation()})
+      )
     ORDER BY "distanceMeters" ASC, s."id" ASC
     LIMIT 1
   ) AS matchedSchool ON true`;
@@ -139,7 +183,8 @@ export async function getAdminLocations(filters: AdminLocationFilters) {
         d."lastSeenAt" AS "deviceLastSeenAt", matchedSchool."id" AS "schoolId",
         matchedSchool."name" AS "schoolName", matchedSchool."latitude" AS "schoolLatitude",
         matchedSchool."longitude" AS "schoolLongitude", matchedSchool."radiusMeters" AS "schoolRadiusMeters",
-        matchedSchool."address" AS "schoolAddress"
+        matchedSchool."address" AS "schoolAddress", matchedSchool."geofenceType" AS "schoolGeofenceType",
+        matchedSchool."polygonCoordinates" AS "schoolPolygonCoordinates"
       FROM "filteredLocations" AS fl
       INNER JOIN "Device" AS d ON d."deviceId" = fl."deviceId"
       ${schoolJoin}
@@ -181,6 +226,9 @@ export async function getAdminLocations(filters: AdminLocationFilters) {
             longitude: row.schoolLongitude,
             radiusMeters: row.schoolRadiusMeters,
             address: row.schoolAddress,
+            geofence: row.schoolGeofenceType === 'POLYGON'
+              ? { type: row.schoolGeofenceType, coordinates: row.schoolPolygonCoordinates }
+              : { type: row.schoolGeofenceType, latitude: row.schoolLatitude, longitude: row.schoolLongitude, radiusMeters: row.schoolRadiusMeters },
           }
         : null,
     })),
@@ -298,7 +346,7 @@ export async function getAdminDashboard(query: AdminDashboardQuery) {
     prisma.device.count(),
     prisma.device.count({ where: { lastSeenAt: { gte: activeSince } } }),
     prisma.school.count(),
-    prisma.school.count({ where: { active: true, radiusMeters: { gt: 0 } } }),
+    prisma.school.count({ where: { active: true } }),
     prisma.geofenceEvent.groupBy({
       by: ['eventType'],
       where: { eventTime: { gte: startOfToday } },

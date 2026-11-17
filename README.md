@@ -140,6 +140,29 @@ GET /api/admin/locations/latest?schoolId=school-001
 GET /api/admin/locations/device-123?from=2026-11-17T00:00:00Z
 ```
 
+### Admin school geofences
+
+The school management routes are `GET /api/admin/schools`, `GET /api/admin/schools/:id`, `POST /api/admin/schools`, `PUT /api/admin/schools/:id`, and `DELETE /api/admin/schools/:id`. List supports `page`, `limit`, `active=true|false`, and `search`. Create and update accept a `geofence` object of either shape:
+
+```json
+{ "type": "CIRCLE", "latitude": 13.0827, "longitude": 80.2707, "radiusMeters": 200 }
+```
+
+```json
+{ "type": "POLYGON", "coordinates": [{ "latitude": 13.08, "longitude": 80.27 }, { "latitude": 13.09, "longitude": 80.27 }, { "latitude": 13.085, "longitude": 80.28 }] }
+```
+
+Create also requires an `id` and `name`; both create and update may include `active`, `address`, and a complete `deviceIds` array to assign devices. Polygon coordinates are validated for bounds, unique vertices, non-zero area, and self-intersections. DELETE deactivates the school and clears its device assignments while retaining historical geofence events and delivery records. School shape and assignment changes are applied transactionally. Apply the schema migration with `npx prisma migrate deploy` before using these routes. Admin routes currently have no authentication or authorization.
+
+### Admin geofence event history
+
+`GET /api/admin/geofence-events` lists geofence events; `GET /api/admin/geofence-events/:id` returns one event; and `GET /api/admin/geofence-events/export` downloads CSV. List and export accept `deviceId`, `schoolId`, `eventType=ENTER|EXIT`, and inclusive ISO 8601 `from`/`to` filters. The list is paginated with `page` and `limit` (default `20`, maximum `100`). CSV export accepts `limit` (default `10000`, maximum `10000`) and reports total matches and truncation in `X-Total-Count` and `X-Export-Truncated` response headers.
+
+```text
+GET /api/admin/geofence-events?schoolId=school-001&eventType=ENTER&page=1&limit=50
+GET /api/admin/geofence-events/export?deviceId=device-123&from=2026-11-17T00:00:00Z
+```
+
 Optional environment variables:
 
 | Variable | Default | Purpose |
