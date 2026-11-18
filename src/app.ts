@@ -12,6 +12,7 @@ import { deviceRouter, mobileDeviceRegistrationRouter } from './routes/device.ro
 import { geofenceRouter } from './routes/geofence.routes';
 import { healthRouter } from './routes/health.routes';
 import { locationRouter } from './routes/location.routes';
+import { officeRouter } from './routes/office.routes';
 import { scanRouter } from './routes/scan.routes';
 import { logger } from './utils/logger';
 
@@ -114,6 +115,7 @@ app.use('/api/v1/devices', deviceRouter);
 app.use('/api/v1/scans', scanRouter);
 app.use('/api/locations', locationRouter);
 app.use('/api/v1/locations', locationRouter);
+app.use('/api/office', officeRouter);
 app.use('/api/geofence-events', geofenceRouter);
 app.use('/api/v1/geofence-events', geofenceRouter);
 app.use('/api/deliveries', deliveryRouter);

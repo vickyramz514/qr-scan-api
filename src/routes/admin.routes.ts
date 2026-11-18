@@ -10,6 +10,7 @@ import {
   createAdminSchool,
   updateAdminSchool,
   deleteAdminSchool,
+  deleteAdminOffice,
   listAdminGeofenceEvents,
   getAdminGeofenceEvent,
   exportAdminGeofenceEvents,
@@ -36,6 +37,7 @@ adminRouter.get('/schools/:id', asyncHandler(getAdminSchool));
 adminRouter.post('/schools', asyncHandler(createAdminSchool));
 adminRouter.put('/schools/:id', asyncHandler(updateAdminSchool));
 adminRouter.delete('/schools/:id', asyncHandler(deleteAdminSchool));
+adminRouter.delete('/offices/:id', asyncHandler(deleteAdminOffice));
 adminRouter.get('/geofence-events', asyncHandler(listAdminGeofenceEvents));
 adminRouter.get('/geofence-events/export', asyncHandler(exportAdminGeofenceEvents));
 adminRouter.get('/geofence-events/:id', asyncHandler(getAdminGeofenceEvent));

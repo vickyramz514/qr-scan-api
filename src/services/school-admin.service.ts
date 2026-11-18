@@ -151,3 +151,20 @@ export async function disableSchool(id: string) {
     return { id: updated.id, name: updated.name, active: updated.active, deleted: true };
   });
 }
+
+export async function deleteOffice(id: string) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.school.findUnique({
+      where: { id },
+      include: { _count: { select: { events: true, deliveries: true } } },
+    });
+    if (!existing) throw new AppError(404, 'OFFICE_NOT_FOUND', 'Office not found');
+    if (existing._count.events > 0 || existing._count.deliveries > 0) {
+      throw new AppError(409, 'OFFICE_IN_USE', 'Office has event or delivery history and cannot be deleted. Disable it instead.');
+    }
+
+    await tx.schoolDevice.deleteMany({ where: { schoolId: id } });
+    await tx.school.delete({ where: { id } });
+    return { id, name: existing.name, deleted: true };
+  });
+}

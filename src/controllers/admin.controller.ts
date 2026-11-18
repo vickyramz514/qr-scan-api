@@ -89,6 +89,10 @@ export async function deleteAdminSchool(req: Request, res: Response): Promise<vo
   sendSuccess(res, await schoolAdminService.disableSchool(parseSchoolId(req.params.id)));
 }
 
+export async function deleteAdminOffice(req: Request, res: Response): Promise<void> {
+  sendSuccess(res, await schoolAdminService.deleteOffice(parseSchoolId(req.params.id)));
+}
+
 export async function listAdminGeofenceEvents(req: Request, res: Response): Promise<void> {
   const query = geofenceEventListQuerySchema.parse(req.query);
   const result = await geofenceEventAdminService.listGeofenceEvents(query);
