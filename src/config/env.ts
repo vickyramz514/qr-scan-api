@@ -10,7 +10,7 @@ const envSchema = z.object({
   ADMIN_API_TOKEN: z.string().min(32).optional(),
   CORS_ORIGIN: z.string().default(''),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
-  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(500),
   LOCATION_MIN_MOVE_METERS: z.coerce.number().positive().default(25),
   LOCATION_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(20_000),
 }).superRefine((config, context) => {

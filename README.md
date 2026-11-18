@@ -577,7 +577,7 @@ curl 'http://localhost:3000/api/v1/devices/8f3a7c2e-91b4-4e2a-9f31/scans?page=1&
 
 The origins `https://admin-portal-fawn-psi.vercel.app`, `https://datacaptain.in`, and `https://www.datacaptain.in` are allowed alongside `CORS_ORIGIN`. Credentialed browser requests and preflight requests are supported.
 | `RATE_LIMIT_WINDOW_MS` | Rate-limit window. Default 15 minutes. |
-| `RATE_LIMIT_MAX_REQUESTS` | Max requests per IP per window. Health checks are excluded. |
+| `RATE_LIMIT_MAX_REQUESTS` | Max requests per IP per window. Default 500. Health checks and CORS preflights are excluded. |
 
 The process exits on startup when required variables are missing or invalid. `.env` is not committed.
 
