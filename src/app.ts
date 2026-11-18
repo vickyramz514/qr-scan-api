@@ -34,29 +34,31 @@ app.use((req, res, next) => {
 
   apiHelmet(req, res, next);
 });
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (isCorsOriginAllowed(origin)) {
-        callback(null, true);
-        return;
-      }
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    if (isCorsOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
 
-      callback(new Error(`Origin not allowed by CORS: ${origin}`));
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Accept',
-      'Authorization',
-      'Idempotency-Key',
-      'X-Device-Id',
-      'X-Requested-With',
-    ],
-    credentials: true,
-    maxAge: 600,
-  }),
-);
+    callback(new Error(`Origin not allowed by CORS: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Idempotency-Key',
+    'X-Device-Id',
+    'X-Requested-With',
+  ],
+  credentials: true,
+  maxAge: 600,
+};
+
+// Explicitly terminate browser preflights before rate limiting and route lookup.
+app.options(/.*/, cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(
   rateLimit({
