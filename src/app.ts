@@ -2,7 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { env, getCorsOrigin } from './config/env';
+import { env, isCorsOriginAllowed } from './config/env';
 import { mountSwagger } from './docs/swagger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { notFoundMiddleware } from './middleware/notFound.middleware';
@@ -36,9 +36,24 @@ app.use((req, res, next) => {
 });
 app.use(
   cors({
-    origin: getCorsOrigin(),
+    origin: (origin, callback) => {
+      if (isCorsOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Idempotency-Key', 'X-Device-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Idempotency-Key',
+      'X-Device-Id',
+      'X-Requested-With',
+    ],
+    credentials: true,
     maxAge: 600,
   }),
 );

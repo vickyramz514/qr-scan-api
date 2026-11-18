@@ -33,13 +33,21 @@ export const env = parsed.data;
 
 export const isProduction = env.NODE_ENV === 'production';
 
-const ADMIN_PORTAL_ORIGIN = 'https://admin-portal-fawn-psi.vercel.app';
+const ALLOWED_CORS_ORIGINS = [
+  'https://admin-portal-fawn-psi.vercel.app',
+  'https://datacaptain.in',
+  'https://www.datacaptain.in',
+];
 
-export function getCorsOrigin(): boolean | string | string[] {
+export function isCorsOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) {
+    return true;
+  }
+
   const value = env.CORS_ORIGIN.trim();
 
   if (value === '*') {
-    return '*';
+    return true;
   }
 
   const configuredOrigins = value
@@ -47,7 +55,5 @@ export function getCorsOrigin(): boolean | string | string[] {
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
 
-  // Keep the deployed admin portal available even when CORS_ORIGIN is unset
-  // or contains only additional local/staging origins.
-  return [...new Set([ADMIN_PORTAL_ORIGIN, ...configuredOrigins])];
+  return [...ALLOWED_CORS_ORIGINS, ...configuredOrigins].includes(origin);
 }

@@ -573,9 +573,9 @@ curl 'http://localhost:3000/api/v1/devices/8f3a7c2e-91b4-4e2a-9f31/scans?page=1&
 | `NODE_ENV` | `development`, `test`, or `production`. |
 | `DATABASE_URL` | PostgreSQL connection string. Required. |
 | `ADMIN_API_TOKEN` | Admin bearer token (minimum 32 characters); required in production. |
-| `CORS_ORIGIN` | `*` allows any browser origin. A comma-separated list allows those origins. Empty disables cross-origin browser access. React Native does not use CORS. |
+| `CORS_ORIGIN` | `*` allows any browser origin. A comma-separated list adds origins to the built-in admin and datacaptain site origins. React Native does not use CORS. |
 
-The production admin portal origin `https://admin-portal-fawn-psi.vercel.app` is allowed alongside `CORS_ORIGIN` so browser preflight requests to `/api/admin` succeed.
+The origins `https://admin-portal-fawn-psi.vercel.app`, `https://datacaptain.in`, and `https://www.datacaptain.in` are allowed alongside `CORS_ORIGIN`. Credentialed browser requests and preflight requests are supported.
 | `RATE_LIMIT_WINDOW_MS` | Rate-limit window. Default 15 minutes. |
 | `RATE_LIMIT_MAX_REQUESTS` | Max requests per IP per window. Health checks are excluded. |
 
