@@ -19,6 +19,7 @@ import { logger } from './utils/logger';
 export const app = express();
 
 app.disable('x-powered-by');
+app.set('etag', false);
 app.set('trust proxy', 1);
 
 const apiHelmet = helmet();
@@ -60,6 +61,10 @@ const corsOptions = {
 // Explicitly terminate browser preflights before rate limiting and route lookup.
 app.options(/.*/, cors(corsOptions));
 app.use(cors(corsOptions));
+app.use('/api/admin', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 app.use(
   rateLimit({
