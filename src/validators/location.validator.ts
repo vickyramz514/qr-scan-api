@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEVICE_ID_PATTERN } from './device.validator';
 import { isPlausibleEventTime } from '../utils/timeWindow';
 
 const coordinate = {
@@ -20,6 +21,8 @@ const coordinate = {
 };
 
 export const locationSchema = z.object({
+  deviceId: z.string().trim().regex(DEVICE_ID_PATTERN, 'Invalid device id').optional(),
+  deviceName: z.string().trim().min(1, 'Device name cannot be empty').max(128, 'Device name must be at most 128 characters').optional(),
   ...coordinate,
   timestamp: z
     .string({ required_error: 'Timestamp is required', invalid_type_error: 'Timestamp must be a string' })

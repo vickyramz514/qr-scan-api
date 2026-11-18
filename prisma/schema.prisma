@@ -20,6 +20,7 @@ enum ScanStatus {
 
 model Device {
   deviceId          String           @id
+  deviceName        String?
   platform          String
   appVersion        String?
   active            Boolean          @default(true)

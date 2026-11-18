@@ -37,6 +37,7 @@ const ALLOWED_CORS_ORIGINS = [
   'https://admin-portal-fawn-psi.vercel.app',
   'https://datacaptain.in',
   'https://www.datacaptain.in',
+  'http://localhost:5173'
 ];
 
 export function isCorsOriginAllowed(origin: string | undefined): boolean {

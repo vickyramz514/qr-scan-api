@@ -14,6 +14,10 @@ export const deviceIdSchema = z.preprocess(
 
 export const registerDeviceSchema = z.object({
   deviceId: deviceIdSchema,
+  deviceName: z.preprocess(
+    (value) => (typeof value === 'string' ? value.trim() : value),
+    z.string().min(1, 'Device name cannot be empty').max(128, 'Device name must be at most 128 characters').optional(),
+  ),
   platform: z.preprocess(
     (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value),
     z.enum(['android', 'ios'], {

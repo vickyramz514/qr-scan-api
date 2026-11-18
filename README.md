@@ -104,7 +104,7 @@ The geofencing app (`geofencing-poc`) calls these routes on the API base URL. Th
 
 A successful call includes top-level `receivedAt`, which is the field the app reads. GPS coordinates and geofence events are not cryptographic proof that a person was physically inside a school. An ENTER event does not change delivery status.
 
-Mobile endpoints do not require user login. Send `X-Device-Id` when the phone has already registered with `POST /api/v1/devices`; otherwise the location is stored as unassigned. School and delivery permission checks cannot be tied to a user until a mobile account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
+Mobile endpoints do not require user login. Device registration is available at `POST /api/devices/register` (and `POST /api/v1/devices`) with `deviceId`, `deviceName`, and `platform`. Location uploads to `POST /api/locations` accept `deviceId` and `deviceName` in the JSON body; a matching `X-Device-Id` header remains supported. The device must be registered before its locations can be attached. Location updates save the latest supplied device name. School and delivery permission checks cannot be tied to a user until a mobile account model exists. The seeded route `route-001` includes `school-001`, `school-002`, and `school-003`, each with a 200 metre radius.
 
 ### Admin dashboard
 

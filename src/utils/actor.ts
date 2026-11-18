@@ -10,14 +10,21 @@ export type Tracker = {
   deviceId: string | null;
 };
 
-export async function resolveTracker(req: Request): Promise<Tracker> {
+export async function resolveTracker(req: Request, bodyDeviceId?: string): Promise<Tracker> {
   const header = req.header('x-device-id');
+  const headerDeviceId = header?.trim();
 
-  if (header === undefined || header.trim().length === 0) {
+  if (headerDeviceId && bodyDeviceId && headerDeviceId !== bodyDeviceId) {
+    throw new AppError(400, 'DEVICE_ID_MISMATCH', 'X-Device-Id must match deviceId');
+  }
+
+  const candidate = headerDeviceId || bodyDeviceId;
+
+  if (!candidate) {
     return { trackerId: UNASSIGNED_TRACKER_ID, deviceId: null };
   }
 
-  const parsed = deviceIdSchema.safeParse(header);
+  const parsed = deviceIdSchema.safeParse(candidate);
   if (!parsed.success) {
     throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
   }

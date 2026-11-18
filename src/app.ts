@@ -8,7 +8,7 @@ import { errorMiddleware } from './middleware/error.middleware';
 import { notFoundMiddleware } from './middleware/notFound.middleware';
 import { deliveryRouter } from './routes/delivery.routes';
 import { adminRouter } from './routes/admin.routes';
-import { deviceRouter } from './routes/device.routes';
+import { deviceRouter, mobileDeviceRegistrationRouter } from './routes/device.routes';
 import { geofenceRouter } from './routes/geofence.routes';
 import { healthRouter } from './routes/health.routes';
 import { locationRouter } from './routes/location.routes';
@@ -108,6 +108,7 @@ app.use((req, res, next) => {
 
 app.use('/api/v1/health', healthRouter);
 app.use('/health', healthRouter);
+app.use('/api/devices', mobileDeviceRegistrationRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/v1/devices', deviceRouter);
 app.use('/api/v1/scans', scanRouter);

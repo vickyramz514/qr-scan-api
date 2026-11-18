@@ -47,7 +47,7 @@ export const openApiSpec = {
         tags: ['Devices'],
         summary: 'Register or update a device',
         description:
-          'Idempotent. The mobile app supplies deviceId. The same deviceId updates platform, appVersion, and lastSeenAt instead of creating a second row. Omitting appVersion on an existing device leaves the stored version unchanged.',
+          'Idempotent. The mobile app supplies deviceId, deviceName, and platform. The same deviceId updates supplied metadata and lastSeenAt instead of creating a second row. Omitting optional fields on an existing device leaves their stored values unchanged.',
         operationId: 'registerDevice',
         requestBody: {
           required: true,
@@ -58,6 +58,38 @@ export const openApiSpec = {
                 deviceId: '8f3a7c2e-91b4-4e2a-9f31',
                 platform: 'android',
                 appVersion: '1.0.0',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Device created or updated',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DeviceResponse' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/api/devices/register': {
+      post: {
+        tags: ['Devices'],
+        summary: 'Register or update a mobile device',
+        description: 'Idempotent mobile registration endpoint. Accepts deviceId, deviceName, and platform.',
+        operationId: 'registerMobileDevice',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RegisterDeviceRequest' },
+              example: {
+                deviceId: '8f3a7c2e-91b4-4e2a-9f31',
+                deviceName: 'Android device',
+                platform: 'android',
               },
             },
           },
@@ -209,7 +241,7 @@ export const openApiSpec = {
         tags: ['Locations'],
         summary: 'Upload a GPS fix',
         description:
-          'Used by the geofencing app. The same route is also available at /api/v1/locations. A fix that has not moved at least 25 metres and is newer by less than 20 seconds is acknowledged without a new database write. An older fix does not replace a newer one. Send X-Device-Id to attach the fix to a registered device. GPS coordinates are not proof of physical presence.',
+          'Used by the geofencing app. The same route is also available at /api/v1/locations. A fix that has not moved at least 25 metres and is newer by less than 20 seconds is acknowledged without a new database write. An older fix does not replace a newer one. Send X-Device-Id or include a registered deviceId in the request body to attach the fix to a device. A supplied deviceName updates the registered device name. GPS coordinates are not proof of physical presence.',
         operationId: 'recordLocation',
         parameters: [{ $ref: '#/components/parameters/deviceHeader' }],
         requestBody: {
@@ -218,6 +250,8 @@ export const openApiSpec = {
             'application/json': {
               schema: { $ref: '#/components/schemas/LocationRequest' },
               example: {
+                deviceId: '8f3a7c2e-91b4-4e2a-9f31',
+                deviceName: 'Android device',
                 latitude: 13.0827,
                 longitude: 80.2707,
                 accuracy: 10,
@@ -493,6 +527,7 @@ export const openApiSpec = {
             maxLength: 128,
             example: '8f3a7c2e-91b4-4e2a-9f31',
           },
+          deviceName: { type: 'string', maxLength: 128, example: 'Android device' },
           platform: { type: 'string', enum: ['android', 'ios'], example: 'android' },
           appVersion: { type: 'string', maxLength: 32, example: '1.0.0' },
         },
@@ -603,6 +638,8 @@ export const openApiSpec = {
         type: 'object',
         required: ['latitude', 'longitude', 'accuracy', 'timestamp'],
         properties: {
+          deviceId: { type: 'string', minLength: 8, maxLength: 128, example: '8f3a7c2e-91b4-4e2a-9f31' },
+          deviceName: { type: 'string', maxLength: 128, example: 'Android device' },
           latitude: { type: 'number', minimum: -90, maximum: 90, example: 13.0827 },
           longitude: { type: 'number', minimum: -180, maximum: 180, example: 80.2707 },
           accuracy: { type: 'number', minimum: 0, example: 10 },

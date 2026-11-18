@@ -26,6 +26,10 @@ export async function registerDevice(input: RegisterDeviceInput): Promise<Device
     platform: input.platform,
   };
 
+  if (input.deviceName !== undefined) {
+    record.deviceName = input.deviceName;
+  }
+
   if (input.appVersion !== undefined) {
     record.appVersion = input.appVersion;
   }
