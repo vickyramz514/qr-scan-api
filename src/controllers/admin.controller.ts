@@ -152,3 +152,9 @@ export async function updateAdminDeviceStatus(req: Request, res: Response): Prom
   const input = updateDeviceStatusSchema.parse(req.body);
   sendSuccess(res, await deviceAdminService.updateDeviceStatus(parsedId.data, input.active));
 }
+
+export async function deleteAdminDevice(req: Request, res: Response): Promise<void> {
+  const parsedId = deviceIdSchema.safeParse(req.params.id);
+  if (!parsedId.success) throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
+  sendSuccess(res, await deviceAdminService.deleteDevice(parsedId.data));
+}

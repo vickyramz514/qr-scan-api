@@ -89,6 +89,7 @@ function presentDevice(device: Prisma.DeviceGetPayload<{ include: typeof deviceI
 
   return {
     deviceId: device.deviceId,
+    deviceName: device.deviceName,
     platform: device.platform,
     appVersion: device.appVersion,
     status: device.active ? 'ACTIVE' : 'INACTIVE',
@@ -200,4 +201,10 @@ export async function updateDeviceStatus(deviceId: string, active: boolean) {
   if (!exists) throw new AppError(404, 'DEVICE_NOT_FOUND', 'Device not found');
   await prisma.device.update({ where: { deviceId }, data: { active } });
   return getDevice(deviceId);
+}
+
+export async function deleteDevice(deviceId: string): Promise<{ deviceId: string; deleted: true }> {
+  const result = await prisma.device.deleteMany({ where: { deviceId } });
+  if (result.count === 0) throw new AppError(404, 'DEVICE_NOT_FOUND', 'Device not found');
+  return { deviceId, deleted: true };
 }

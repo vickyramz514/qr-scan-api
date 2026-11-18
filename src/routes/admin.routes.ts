@@ -19,6 +19,7 @@ import {
   createAdminDevice,
   updateAdminDevice,
   updateAdminDeviceStatus,
+  deleteAdminDevice,
 } from '../controllers/admin.controller';
 import { asyncHandler } from '../utils/asyncHandler';
 import { requireAdmin } from '../middleware/admin-auth.middleware';
@@ -46,3 +47,4 @@ adminRouter.post('/devices', asyncHandler(createAdminDevice));
 adminRouter.get('/devices/:id', asyncHandler(getAdminDevice));
 adminRouter.put('/devices/:id', asyncHandler(updateAdminDevice));
 adminRouter.patch('/devices/:id/status', asyncHandler(updateAdminDeviceStatus));
+adminRouter.delete('/devices/:id', asyncHandler(deleteAdminDevice));
