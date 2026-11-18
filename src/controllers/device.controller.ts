@@ -16,6 +16,17 @@ export async function registerDevice(req: Request, res: Response): Promise<void>
   sendSuccess(res, device);
 }
 
+export async function getRegisteredDevice(req: Request, res: Response): Promise<void> {
+  const parsedId = deviceIdSchema.safeParse(readParam(req.params.deviceId));
+
+  if (!parsedId.success) {
+    throw new AppError(400, 'INVALID_DEVICE_ID', 'Invalid device id');
+  }
+
+  const device = await deviceService.getRegisteredDevice(parsedId.data);
+  sendSuccess(res, device);
+}
+
 export async function listDeviceScans(req: Request, res: Response): Promise<void> {
   const parsedId = deviceIdSchema.safeParse(readParam(req.params.deviceId));
 

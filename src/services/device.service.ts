@@ -1,9 +1,11 @@
 import { Device } from '@prisma/client';
 import * as deviceRepository from '../repositories/device.repository';
 import { RegisterDeviceInput } from '../validators/device.validator';
+import { AppError } from '../utils/errors';
 
 export type DeviceResponse = {
   deviceId: string;
+  deviceName: string | null;
   platform: string;
   appVersion: string | null;
   createdAt: string;
@@ -13,6 +15,7 @@ export type DeviceResponse = {
 export function toDeviceResponse(device: Device): DeviceResponse {
   return {
     deviceId: device.deviceId,
+    deviceName: device.deviceName,
     platform: device.platform,
     appVersion: device.appVersion,
     createdAt: device.createdAt.toISOString(),
@@ -35,5 +38,13 @@ export async function registerDevice(input: RegisterDeviceInput): Promise<Device
   }
 
   const device = await deviceRepository.upsertDevice(record);
+  return toDeviceResponse(device);
+}
+
+export async function getRegisteredDevice(deviceId: string): Promise<DeviceResponse> {
+  const device = await deviceRepository.findDeviceById(deviceId);
+  if (!device) {
+    throw new AppError(404, 'DEVICE_NOT_FOUND', 'Device is not registered');
+  }
   return toDeviceResponse(device);
 }
